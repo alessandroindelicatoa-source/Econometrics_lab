@@ -594,8 +594,24 @@ elif page=="🧪 Research Lab":
         y=st.selectbox("Outcome",nums,key="sc_y")
         focal=st.selectbox("Focal variable",[c for c in nums if c!=y],key="sc_focal")
         candidate=st.multiselect("Candidate controls",[c for c in nums if c not in [y,focal]],key="sc_controls")
-        max_controls=st.slider("Maximum controls per model",0,min(5,len(candidate)),min(3,len(candidate)))
-        max_specs=st.slider("Maximum specifications",10,200,100,10)
+        if candidate:
+    max_controls = st.slider(
+        "Maximum controls per model",
+        min_value=0,
+        max_value=min(5, len(candidate)),
+        value=min(3, len(candidate)),
+        key="sc_max_controls",
+    )
+else:
+    max_controls = 0
+        max_specs = st.slider(
+    "Maximum specifications",
+    10,
+    200,
+    100,
+    10,
+    key="sc_max_specs",
+)
         if st.button("RUN SPECIFICATION CURVE",type="primary",use_container_width=True):
             rows=[]
             combos=[]
