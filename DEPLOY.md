@@ -1,73 +1,41 @@
-# GitHub + Streamlit Cloud deployment
+# Deploy Econometrics Lab V2
 
-## 1. Create the repository
-Create a new GitHub repository, for example:
+1. Create or open your GitHub repository.
+2. Replace the previous project files with the contents of this V2 folder.
+3. Keep the directory structure exactly as provided.
+4. Commit the changes.
+5. Streamlit Community Cloud should redeploy automatically.
 
-`econometrics-lab`
+If creating a new app:
+- Repository: your Econometrics Lab repository
+- Branch: `main`
+- Main file: `app.py`
 
-## 2. Upload the project
-Upload the CONTENTS of the `econometrics_lab` project folder to the root of the repository.
+Recommended Python version: 3.12.
 
-The GitHub root should look like:
+## First smoke test
 
-```text
-app.py
-requirements.txt
-README.md
-DEPLOY.md
-.streamlit/
-data/
-econometrics_lab/
-```
+Load **Data → Panel / causal research demo**.
 
-Do not upload an extra outer folder if GitHub would make the path `econometrics_lab/econometrics_lab/app.py`.
-
-## 3. Deploy
-In Streamlit Community Cloud:
-
-1. New app
-2. Select your GitHub repository
-3. Branch: `main`
-4. Main file path: `app.py`
-5. Deploy
-
-If the platform asks for a Python version, use Python 3.12.
-
-## 4. First test
-Open:
-
-**Data → Import → Built-in demos → Panel / causal demo → Load demo**
-
-Then try:
+Then:
 
 ### OLS
-- Dependent: `wage`
-- Regressors: `education`, `age`, `female`, `immigrant`
-- Covariance: `HC3`
+Model Studio → Cross-sectional
+- Y: `wage`
+- X: `education`, `age`, `female`, `immigrant`
+- SE: `HC3`
 
 ### Logit
-- Dependent: `employed`
-- Regressors: `education`, `age`, `female`, `immigrant`
-
-### Panel FE
-- Entity: `id`
-- Time: `year`
-- Dependent: `outcome`
-- Regressors: `education`, `age`, `treat`, `post`
-- Time fixed effects: ON
-- Covariance: clustered
+- Y: `employed`
+- X: `education`, `age`, `female`, `immigrant`
 
 ### DiD
-- Outcome: `outcome`
+Model Studio → Causal → Difference-in-Differences
+- Y: `outcome`
 - Treatment: `treat`
 - Post: `post`
 - Unit: `id`
 - Time: `year`
 
-The synthetic data were constructed so that the DiD interaction is positive and detectable.
-
-## 5. Graphs
-Use **Graphs** as a standalone visual workspace or estimate models first and then use **Graphs → Model graphs**.
-
-## 6. No secrets required
-The current version does not require API keys, passwords or external AI services.
+### Research Lab
+Use `outcome` as Y and `treat` or another focal predictor to test the robustness interface.
