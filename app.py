@@ -1,4 +1,5 @@
 import streamlit as st
+import hmac
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -38,6 +39,66 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+def check_password():
+    """Require the password stored in Streamlit Secrets as APP_PASSWORD."""
+    if st.session_state.get("authenticated", False):
+        return True
+
+    st.markdown(
+        """
+        <div style="
+            max-width:520px;
+            margin:8vh auto 1.5rem auto;
+            padding:1.6rem 1.8rem;
+            border:1px solid #e2eaee;
+            border-radius:18px;
+            background:#ffffff;
+            box-shadow:0 8px 30px rgba(20,43,56,.06);
+        ">
+            <div style="font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;
+                        color:#0f6c78;font-weight:700;margin-bottom:.35rem;">
+                Interactive Econometric Research Environment
+            </div>
+            <div style="font-size:2rem;font-weight:750;color:#142b38;margin-bottom:.35rem;">
+                Econometrics Lab
+            </div>
+            <div style="color:#647986;">
+                Acceso restringido. Introduce la contraseña para continuar.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.form("login_form", clear_on_submit=False):
+        password = st.text_input("Contraseña", type="password", autocomplete="current-password")
+        submitted = st.form_submit_button("Entrar", type="primary", use_container_width=True)
+
+    if submitted:
+        try:
+            correct_password = str(st.secrets["APP_PASSWORD"])
+        except Exception:
+            st.error(
+                "La contraseña todavía no está configurada en Streamlit Secrets. "
+                "Añade una variable `APP_PASSWORD` en la configuración de la app."
+            )
+            return False
+
+        if hmac.compare_digest(password, correct_password):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Contraseña incorrecta.")
+
+    return False
+
+def logout():
+    st.session_state["authenticated"] = False
+
+if not check_password():
+    st.stop()
+
 inject_css()
 
 NAV=[
@@ -183,6 +244,8 @@ def render_model_result(model,df):
 with st.sidebar:
     st.markdown("## ECONOMETRICS LAB")
     st.caption("Interactive Econometric Research Environment")
+    st.button("🔒 Cerrar sesión", on_click=logout, use_container_width=True)
+    st.divider()
     st.radio("Navigation",NAV,key="nav",label_visibility="collapsed")
     st.divider()
     if st.session_state.df is not None:
@@ -593,35 +656,9 @@ elif page=="🧪 Research Lab":
     with tabs[2]:
         y=st.selectbox("Outcome",nums,key="sc_y")
         focal=st.selectbox("Focal variable",[c for c in nums if c!=y],key="sc_focal")
-        candidate=st.multiselect(
-            "Candidate controls",
-            [c for c in nums if c not in [y,focal]],
-            key="sc_controls"
-        )
-
-        if candidate:
-            max_controls = st.slider(
-                "Maximum controls per model",
-                min_value=0,
-                max_value=min(5, len(candidate)),
-                value=min(3, len(candidate)),
-                key="sc_max_controls",
-            )
-        else:
-            max_controls = 0
-            st.caption(
-                "Select at least one candidate control to vary specifications. "
-                "With no controls selected, the baseline specification can still be estimated."
-            )
-
-        max_specs = st.slider(
-            "Maximum specifications",
-            min_value=10,
-            max_value=200,
-            value=100,
-            step=10,
-            key="sc_max_specs",
-        )
+        candidate=st.multiselect("Candidate controls",[c for c in nums if c not in [y,focal]],key="sc_controls")
+        max_controls=st.slider("Maximum controls per model",0,min(5,len(candidate)),min(3,len(candidate)))
+        max_specs=st.slider("Maximum specifications",10,200,100,10)
         if st.button("RUN SPECIFICATION CURVE",type="primary",use_container_width=True):
             rows=[]
             combos=[]
