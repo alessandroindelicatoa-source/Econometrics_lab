@@ -38,7 +38,7 @@ def interpret_model(model, focal=None):
             r=row.iloc[0]
             b=float(r["coef"]); p=float(r["p_value"]) if pd.notna(r["p_value"]) else np.nan
             ci=f"[{r['ci_low']:.4g}, {r['ci_high']:.4g}]"
-            if model.family in ("OLS","WLS","Quantile Regression","Fixed Effects","Random Effects","Pooled OLS","First Differences"):
+            if model.family in ("OLS","WLS","Linear Probability Model","Quantile Regression","Fixed Effects","Random Effects","Pooled OLS","First Differences"):
                 lines.append(
                     f"**Focal result — `{focal}`:** the estimated coefficient is **{b:.4g}** "
                     f"(95% CI {ci}), {_sig_phrase(p)}. Holding the remaining regressors fixed, "
@@ -50,7 +50,7 @@ def interpret_model(model, focal=None):
                     f"**Focal result — `{focal}`:** β = **{b:.4g}** (95% CI {ci}), {_sig_phrase(p)}. "
                     f"For the count component, exp(β) implies an approximate **{pct:.2f}%** multiplicative change in the expected count per one-unit increase, ceteris paribus."
                 )
-            elif model.family in ("Logit","Probit"):
+            elif model.family in ("Logit","Probit","Cloglog"):
                 me=None
                 if model.marginal_effects is not None:
                     m=model.marginal_effects
@@ -85,7 +85,7 @@ def interpret_model(model, focal=None):
 
     if model.family=="OLS":
         lines.append("**Recommended checks:** functional form/RESET, heteroskedasticity, influential observations, multicollinearity and residual dependence where relevant.")
-    elif model.family in ("Logit","Probit"):
+    elif model.family in ("Logit","Probit","Cloglog"):
         lines.append("**Recommended checks:** marginal effects, calibration, ROC/AUC, separation, influential observations and sensitivity to specification.")
     elif model.family in ("Fixed Effects","Random Effects","Pooled OLS","First Differences"):
         lines.append("**Recommended checks:** serial/cross-sectional dependence, clustered covariance, time effects, within variation and FE–RE specification.")

@@ -96,6 +96,16 @@ def fit_cross_section(df, name, family, y, x, categoricals=None, interactions=No
         result = fit_with_cov(smf.logit(formula, data=df, missing="drop"), discrete=True)
     elif family == "Probit":
         result = fit_with_cov(smf.probit(formula, data=df, missing="drop"), discrete=True)
+    elif family == "Cloglog":
+        model = smf.glm(formula, data=df, family=sm.families.Binomial(link=sm.families.links.CLogLog()), missing="drop")
+        if cov == "Classical":
+            result = model.fit()
+        elif cov == "Cluster":
+            base = model.fit()
+            groups = df.loc[base.model.data.row_labels, cluster]
+            result = model.fit(cov_type="cluster", cov_kwds={"groups": groups})
+        else:
+            result = model.fit(cov_type=cov)
     elif family == "Poisson":
         model = smf.glm(formula, data=df, family=sm.families.Poisson(), missing="drop")
         if cov == "Classical":
@@ -122,7 +132,7 @@ def fit_cross_section(df, name, family, y, x, categoricals=None, interactions=No
         raise ValueError(f"Model not implemented here: {family}")
 
     me = None
-    if family in ("Logit","Probit"):
+    if family in ("Logit","Probit","Cloglog"):
         try:
             me = result.get_margeff(at="overall").summary_frame().reset_index().rename(columns={"index":"term"})
         except Exception:
@@ -222,26 +232,49 @@ def fit_iv(df, name, y, exog, endog, instruments, cov="robust"):
 def fit_did(df, name, y, treat, post, controls=None, unit=None, time=None, add_fe=False, cov="HC3"):
     controls = controls or []
     rhs = [treat, post, f"{treat}:{post}"] + controls
-    if add_fe and unit: rhs.append(f"C({unit})")
-    if add_fe and time: rhs.append(f"C({time})")
+    if add_fe and unit:
+        rhs.append(f"C({unit})")
+    if add_fe and time:
+        rhs.append(f"C({time})")
     formula = f"{y} ~ " + " + ".join(rhs)
     mod = smf.ols(formula, data=df, missing="drop")
     base = mod.fit()
+
     if cov == "Cluster unit" and unit:
         groups = df.loc[base.model.data.row_labels, unit]
         result = base.get_robustcov_results(cov_type="cluster", groups=groups)
         names = base.model.exog_names
-        result.params = pd.Series(result.params, index=names)
-        result.bse = pd.Series(result.bse, index=names)
-        result.pvalues = pd.Series(result.pvalues, index=names)
+        params = np.asarray(result.params)
+        bse = np.asarray(result.bse)
+        pvals = np.asarray(result.pvalues)
+        stat = np.asarray(result.tvalues)
+        ci = np.asarray(result.conf_int())
+        tab = pd.DataFrame({
+            "term": names,
+            "coef": params,
+            "std_err": bse,
+            "stat": stat,
+            "p_value": pvals,
+            "ci_low": ci[:,0],
+            "ci_high": ci[:,1],
+        })
+        tab["sig"] = tab["p_value"].apply(significance_stars)
     elif cov in ("HC0","HC1","HC2","HC3"):
         result = mod.fit(cov_type=cov)
+        tab = _coef_table(result)
     else:
         result = base
-    fitted = pd.Series(np.asarray(result.predict()), index=result.model.data.row_labels)
-    resid = pd.Series(np.asarray(result.resid), index=result.model.data.row_labels)
-    return ModelResult(name,"Difference-in-Differences",formula,_coef_table(result),_metrics(result),
-                       fitted,resid,None,result,y)
+        tab = _coef_table(result)
+
+    fitted = pd.Series(np.asarray(result.predict()), index=base.model.data.row_labels, name="fitted")
+    resid = pd.Series(np.asarray(result.resid), index=base.model.data.row_labels, name="residual")
+    notes = []
+    if cov == "Cluster unit" and unit:
+        notes.append(f"Clustered covariance by: {unit}")
+    return ModelResult(
+        name,"Difference-in-Differences",formula,tab,_metrics(result),
+        fitted,resid,None,result,y,notes
+    )
 
 def fit_arima(df, name, y, p=1,d=0,q=0, exog=None):
     cols=[y]+(exog or [])
