@@ -1,0 +1,15 @@
+streamlit>=1.61,<2
+pandas>=2.2
+numpy>=2.0
+scipy>=1.13
+statsmodels>=0.14.6
+linearmodels>=7.0
+plotly>=6.0
+scikit-learn>=1.5
+openpyxl>=3.1
+xlsxwriter>=3.2
+pyarrow>=17
+pyreadstat>=1.2
+python-docx>=1.1
+reportlab>=4.2
+patsy>=1.0
